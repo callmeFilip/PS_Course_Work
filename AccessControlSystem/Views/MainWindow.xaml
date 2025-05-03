@@ -1,19 +1,9 @@
-﻿<Window x:Class="AccessControlSystem.Views.MainWindow"
+﻿<!-- Views/MainWindow.xaml -->
+<Window x:Class="AccessControlSystem.Views.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:vm="clr-namespace:AccessControlSystem.ViewModels"
-        Title="Card Access Control" 
-        Height="450" Width="700"
+        Title="Card Access Control" Height="450" Width="700"
         WindowStartupLocation="CenterScreen">
-
-    <Grid>
-        <DataGrid ItemsSource="{Binding AccessTimes}" AutoGenerateColumns="False" IsReadOnly="True" Margin="10">
-            <DataGrid.Columns>
-                <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="Auto"/>
-                <DataGridTextColumn Header="Time" Binding="{Binding Time, StringFormat={}{0:g}}" Width="*"/>
-                <DataGridTextColumn Header="Card ID" Binding="{Binding CardId}" Width="Auto"/>
-                <DataGridTextColumn Header="Card Reader ID" Binding="{Binding CardReaderId}" Width="Auto"/>
-            </DataGrid.Columns>
-        </DataGrid>
-    </Grid>
+    <Frame x:Name="MainFrame"
+           NavigationUIVisibility="Hidden"/>
 </Window>

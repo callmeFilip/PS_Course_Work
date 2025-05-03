@@ -1,7 +1,5 @@
 ﻿using System.Windows;
 using AccessControlSystem.Services;
-using System.Threading.Tasks;
-using AccessControlSystem.Models;
 using AccessControlSystem.Data;
 using AccessControlSystem.ViewModels;
 
@@ -32,7 +30,7 @@ namespace AccessControlSystem
             };
 
             mainWindow.Show();
-
+            mainWindow.Navigate(new Views.AccessLogPage(UnitOfWork, MqttService));
         }
         protected override void OnExit(ExitEventArgs e)
         {

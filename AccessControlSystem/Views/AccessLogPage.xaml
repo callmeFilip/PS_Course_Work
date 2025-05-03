@@ -1,0 +1,43 @@
+﻿<Page x:Class="AccessControlSystem.Views.AccessLogPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <Grid>
+        <DataGrid ItemsSource="{Binding AccessTimes}"
+                  AutoGenerateColumns="False"
+                  HeadersVisibility="Column"
+                  CanUserAddRows="False"
+                  Margin="10"
+                  IsReadOnly="True">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="ID"   Binding="{Binding Id}"                Width="60"/>
+                <!-- Time of swipe -->
+                <DataGridTextColumn Header="Time"
+                                    Binding="{Binding Time,StringFormat={}{0:g}}"
+                                    Width="140"/>
+
+                <!-- Card primary key -->
+                <DataGridTextColumn Header="Card ID"
+                                    Binding="{Binding CardId}"
+                                    Width="90"/>
+
+                <!-- Reader primary key -->
+                <DataGridTextColumn Header="Reader ID"
+                                    Binding="{Binding CardReaderId}"
+                                    Width="90"/>
+
+                <!-- Details → user page -->
+                <DataGridTemplateColumn Header="">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <Button Content="Details"
+                            Padding="4,1"
+                            Click="Details_Click"/>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+
+            </DataGrid.Columns>
+        </DataGrid>
+    </Grid>
+</Page>
