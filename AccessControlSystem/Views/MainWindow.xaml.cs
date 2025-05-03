@@ -1,15 +1,13 @@
-﻿using CardAccessControl.ViewModels;
+﻿using AccessControlSystem.ViewModels;
 using System.Windows;
 
-namespace CardAccessControl.Views
+namespace AccessControlSystem.Views
 {
     public partial class MainWindow : Window
     {
         public MainWindow()
         {
             InitializeComponent();
-            var mqtt = ((App)Application.Current).MqttService;   // grab the live service
-            DataContext = new MainViewModel(mqtt);
         }
     }
 }

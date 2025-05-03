@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Formats.Tar;
 
-namespace CardAccessControl.Models
+namespace AccessControlSystem.Models
 {
     public class AccessTime
     {

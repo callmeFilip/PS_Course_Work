@@ -2,58 +2,61 @@
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Linq;
-using CardAccessControl.Models;
-using CardAccessControl.Data;
+using AccessControlSystem.Models;
+using AccessControlSystem.Data;
 using Microsoft.EntityFrameworkCore;
 using System.Windows;
-using CardAccessControl.Services;
+using AccessControlSystem.Services;
 
-namespace CardAccessControl.ViewModels
+namespace AccessControlSystem.ViewModels
 {
+    /// <summary>
+    ///  Shows the last N access events and updates instantly when MqttService
+    ///  reports a new swipe.
+    /// </summary>
     public class MainViewModel : INotifyPropertyChanged
     {
-        private readonly MqttService _mqtt;
+        private const int _pageSize = 100;
+        private readonly IUnitOfWork _uow;
 
-        private ObservableCollection<AccessTime> _accessTimes = new();
-        public ObservableCollection<AccessTime> AccessTimes
-        {
-            get => _accessTimes;
-            set { _accessTimes = value; OnPropertyChanged(); }
-        }
+        public ObservableCollection<AccessTime> AccessTimes { get; } = new();
 
-        public MainViewModel(MqttService mqtt)
+
+        public MainViewModel(IUnitOfWork uow, MqttService mqtt)
         {
-            _mqtt = mqtt;
-            _mqtt.AccessTimeLogged += Mqtt_AccessTimeLogged;   // 🔔 subscribe
+            _uow = uow;
+
+            mqtt.AccessTimeLogged += Mqtt_AccessTimeLogged;   // Subscribe
 
             _ = LoadAccessTimesAsync();                        // initial fill
         }
 
         private async Task LoadAccessTimesAsync()
         {
-            await using var context = new AccessControlContext();
-            var items = await context.AccessTimes
-                                      .OrderByDescending(at => at.Time)
-                                      .ToListAsync();
-
-            Application.Current.Dispatcher.Invoke(() =>
+            try
             {
-                AccessTimes.Clear();
-                foreach (var item in items)
-                    AccessTimes.Add(item);
-            });
+                var latest = await _uow.AccessTimes.GetLatestAsync(_pageSize);
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    AccessTimes.Clear();
+                    foreach (var a in latest) AccessTimes.Add(a);
+                });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"LoadAccessTimesAsync failed: {ex}");
+            }
         }
         private void Mqtt_AccessTimeLogged(object? s, AccessTime at)
         {
-            Application.Current.Dispatcher.BeginInvoke(() =>
+            Application.Current.Dispatcher.Invoke(() =>
             {
                 AccessTimes.Insert(0, at);
             });
         }
 
         public event PropertyChangedEventHandler? PropertyChanged;
-        protected void OnPropertyChanged([CallerMemberName] string propertyName = null) =>
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-        
+        private void OnPropertyChanged([CallerMemberName] string? n = null) =>
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
     }
 }

@@ -138,7 +138,6 @@ C:\Users\Filip Andonov\Desktop\C#\Course_Project\AccessControlSystem\AccessContr
 C:\Users\Filip Andonov\Desktop\C#\Course_Project\AccessControlSystem\AccessControlSystem\obj\Debug\net8.0-windows\MainWindow.g.cs
 C:\Users\Filip Andonov\Desktop\C#\Course_Project\AccessControlSystem\AccessControlSystem\obj\Debug\net8.0-windows\Views\MainWindow.g.cs
 C:\Users\Filip Andonov\Desktop\C#\Course_Project\AccessControlSystem\AccessControlSystem\obj\Debug\net8.0-windows\App.g.cs
-C:\Users\Filip Andonov\Desktop\C#\Course_Project\AccessControlSystem\AccessControlSystem\obj\Debug\net8.0-windows\GeneratedInternalTypeHelper.g.cs
 C:\Users\Filip Andonov\Desktop\C#\Course_Project\AccessControlSystem\AccessControlSystem\obj\Debug\net8.0-windows\AccessControlSystem_MarkupCompile.cache
 C:\Users\Filip Andonov\Desktop\C#\Course_Project\AccessControlSystem\AccessControlSystem\obj\Debug\net8.0-windows\AccessControlSystem_MarkupCompile.lref
 C:\Users\Filip Andonov\Desktop\C#\Course_Project\AccessControlSystem\AccessControlSystem\obj\Debug\net8.0-windows\MainWindow.baml

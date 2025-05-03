@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace CardAccessControl.Models
+namespace AccessControlSystem.Models
 {
     public class CardReader
     {

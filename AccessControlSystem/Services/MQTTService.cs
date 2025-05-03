@@ -1,5 +1,5 @@
-﻿using CardAccessControl.Data;
-using CardAccessControl.Models;
+﻿using AccessControlSystem.Data;
+using AccessControlSystem.Models;
 using MQTTnet;
 using MQTTnet.Client;
 using MQTTnet.Formatter;  // For MqttProtocolVersion
@@ -8,106 +8,116 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
-namespace CardAccessControl.Services
+namespace AccessControlSystem.Services
 {
+    /// <summary>
+    ///  Listens to card‑reader topics, stores every swipe, and raises an event so
+    ///  the UI can refresh in real time.
+    /// </summary>
     public class MqttService
     {
-        private readonly IMqttClient _mqttClient;
-        private readonly MqttClientOptions _mqttOptions;
-
-        private readonly SemaphoreSlim _dbSemaphore = new(1, 1);
-
+        private readonly IUnitOfWork _uow;
+        private readonly IMqttClient _client;
+        private readonly MqttClientOptions _options;
+        private readonly SemaphoreSlim _dbLock = new(1, 1);
 
         public event EventHandler<AccessTime>? AccessTimeLogged;
         private void OnAccessTimeLogged(AccessTime at) =>
         AccessTimeLogged?.Invoke(this, at);
-        public MqttService()
+        public MqttService(IUnitOfWork uow)
         {
-            var factory = new MqttFactory(); 
-            _mqttClient = factory.CreateMqttClient();
+            _uow = uow;
 
-            _mqttOptions = new MqttClientOptionsBuilder()
+            var factory = new MqttFactory();
+            _client = factory.CreateMqttClient();
+
+            _options = new MqttClientOptionsBuilder()
                 .WithClientId("CardAccessControlClient")
                 .WithTcpServer("127.0.0.1", 1883)
                 .WithProtocolVersion(MqttProtocolVersion.V500)  // Use MQTT v5
                 .Build();
 
-            _mqttClient.ConnectedAsync += async e =>
+            _client.ConnectedAsync += async e =>
             {
                 Console.WriteLine("Connected to MQTT broker.");
-                await _mqttClient.SubscribeAsync("cardreader/+/request");
+                await _client.SubscribeAsync("cardreader/+/request");
                 Console.WriteLine("Subscribed to topic: cardreader/+/request");
             };
 
-            _mqttClient.DisconnectedAsync += async e =>
+            _client.DisconnectedAsync += async e =>
             {
                 Console.WriteLine("Disconnected from MQTT broker.");
                 await Task.CompletedTask;
             };
 
-            _mqttClient.ApplicationMessageReceivedAsync += async e =>
-            {
-                try
-                {
-                    string topic = e.ApplicationMessage.Topic;
-                    string payload = Encoding.UTF8.GetString(e.ApplicationMessage.Payload ?? []);
-                    
-                    Console.WriteLine($"Lock: '{ExtractCardReaderId(topic)}' – card_id: {payload}");
-
-                    var accessTime = new AccessTime
-                    {
-                        Time = DateTime.Now,
-                        CardId = int.Parse(payload),
-                        CardReaderId = ExtractCardReaderId(topic)
-                    };
-
-      
-                    await _dbSemaphore.WaitAsync();
-                    try
-                    {
-                        await using var db = new AccessControlContext();
-                        db.AccessTimes.Add(accessTime);
-                        await db.SaveChangesAsync();                
-                    }
-                    finally
-                    {
-                        _dbSemaphore.Release();
-                    }
-                    Console.WriteLine($"Access logged: {accessTime.Id}");
-                    OnAccessTimeLogged(accessTime);
-
-                    await PublishMessage("actuator/response", $"Processed: {payload}");
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"MQTT handler error: {ex}");
-                }
-            };
+            _client.ApplicationMessageReceivedAsync += HandleMessageAsync;
         }
 
         public async Task ConnectAsync()
         {
-            if (!_mqttClient.IsConnected)
+            if (!_client.IsConnected)
             {
-                await _mqttClient.ConnectAsync(_mqttOptions);
+                await _client.ConnectAsync(_options);
             }
         }
+
+        private async Task HandleMessageAsync(MqttApplicationMessageReceivedEventArgs e)
+        {
+            try
+            {
+                string topic = e.ApplicationMessage.Topic;
+                string payload = Encoding.UTF8.GetString(e.ApplicationMessage.Payload ?? []);
+
+                Console.WriteLine($"Lock: '{ExtractCardReaderId(topic)}' – card_id: {payload}");
+
+                var accessTime = new AccessTime
+                {
+                    Time = DateTime.Now,
+                    CardId = int.Parse(payload),
+                    CardReaderId = ExtractCardReaderId(topic)
+                };
+
+                await _dbLock.WaitAsync();
+                try
+                {
+                    await _uow.AccessTimes.AddAsync(accessTime);
+                    await _uow.CommitAsync();
+                }
+                finally
+                {
+                    _dbLock.Release();
+                }
+
+                Console.WriteLine($"Access logged: {accessTime.Id}");
+
+                OnAccessTimeLogged(accessTime); // Notify UI
+
+                await PublishMessage("actuator/response", $"Processed: {payload}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"MQTT handler error: {ex}");
+            }
+        }
+        
 
         public async Task PublishMessage(string topic, string message)
         {
-            if (_mqttClient.IsConnected)
-            {
-                var mqttMessage = new MqttApplicationMessageBuilder()
-                    .WithTopic(topic)
-                    .WithPayload(message)
-                    .Build();
-
-                await _mqttClient.PublishAsync(mqttMessage);
-                Console.WriteLine($"Published message to '{topic}': {message}");
+            if (!_client.IsConnected)
+            { 
+                return;
             }
+            
+            var mqttMessage = new MqttApplicationMessageBuilder()
+                .WithTopic(topic)
+                .WithPayload(message)
+                .Build();
+
+            await _client.PublishAsync(mqttMessage);
+            Console.WriteLine($"Published message to '{topic}': {message}");
         }
 
-        private int ExtractCardReaderId(string topic)
+        private static int ExtractCardReaderId(string topic)
         {
             string pattern = @"cardreader/(\d+)/request";
 
@@ -121,6 +131,11 @@ namespace CardAccessControl.Services
             {
                 throw new ArgumentException("Input string does not match the expected format.");
             }
+        }
+        public async ValueTask DisposeAsync()
+        {
+            if (_client.IsConnected) await _client.DisconnectAsync();
+            _dbLock.Dispose();
         }
     }
 }

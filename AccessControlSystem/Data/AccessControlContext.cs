@@ -1,7 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using CardAccessControl.Models;
+using AccessControlSystem.Models;
 
-namespace CardAccessControl.Data
+namespace AccessControlSystem.Data
 {
     public class AccessControlContext : DbContext
     {
