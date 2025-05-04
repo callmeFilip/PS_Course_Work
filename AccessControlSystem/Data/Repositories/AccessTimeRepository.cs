@@ -14,6 +14,13 @@ namespace AccessControlSystem.Data.Repositories
                                   .OrderByDescending(a => a.Time)
                                   .Take(take)
                                   .ToListAsync();
+        public async Task<IEnumerable<AccessTime>> GetLatestWithReaderAsync(int take) =>
+            await _ctx.AccessTimes
+                      .Include(a => a.CardReader)
+                      .AsNoTracking()
+                      .OrderByDescending(a => a.Time)
+                      .Take(take)
+                      .ToListAsync();
 
         public async Task<IEnumerable<AccessTime>> GetByCardAsync(int cardId,
                                                                   DateTime from,

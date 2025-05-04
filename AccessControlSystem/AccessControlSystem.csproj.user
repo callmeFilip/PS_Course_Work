@@ -5,7 +5,16 @@
     <Compile Update="Views\AccessLogPage.xaml.cs">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Update="Views\CardsPage.xaml.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Update="Views\ReadersPage.xaml.cs">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Update="Views\UserDetailsPage.xaml.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Update="Views\UsersPage.xaml.cs">
       <SubType>Code</SubType>
     </Compile>
   </ItemGroup>

@@ -16,5 +16,10 @@ namespace AccessControlSystem.Data.Repositories
             await _ctx.Cards.AsNoTracking()
                             .Where(c => c.UserId == userId)
                             .ToListAsync();
+        public async Task<IEnumerable<Card>> GetAllWithOwnerAsync() =>
+        await _ctx.Cards
+                  .Include(c => c.User)
+                  .AsNoTracking()
+                  .ToListAsync();
     }
 }

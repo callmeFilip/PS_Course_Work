@@ -7,5 +7,5 @@ namespace AccessControlSystem.Views
     {
         public MainWindow() => InitializeComponent();
         public void Navigate(Page page) => MainFrame.Navigate(page);
-    }
+    } 
 }

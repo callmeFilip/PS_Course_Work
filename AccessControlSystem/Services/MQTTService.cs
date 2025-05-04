@@ -1,5 +1,6 @@
 ﻿using AccessControlSystem.Data;
 using AccessControlSystem.Models;
+using AccessControlSystem.Security;
 using MQTTnet;
 using MQTTnet.Client;
 using MQTTnet.Formatter;  // For MqttProtocolVersion
@@ -20,6 +21,7 @@ namespace AccessControlSystem.Services
         private readonly IMqttClient _client;
         private readonly MqttClientOptions _options;
         private readonly SemaphoreSlim _dbLock = new(1, 1);
+        private readonly AccessEvaluator _evaluator;
 
         public event EventHandler<AccessTime>? AccessTimeLogged;
         private void OnAccessTimeLogged(AccessTime at) =>
@@ -27,6 +29,7 @@ namespace AccessControlSystem.Services
         public MqttService(IUnitOfWork uow)
         {
             _uow = uow;
+            _evaluator = new AccessEvaluator(uow);
 
             var factory = new MqttFactory();
             _client = factory.CreateMqttClient();
@@ -68,19 +71,31 @@ namespace AccessControlSystem.Services
                 string topic = e.ApplicationMessage.Topic;
                 string payload = Encoding.UTF8.GetString(e.ApplicationMessage.Payload ?? []);
 
-                Console.WriteLine($"Lock: '{ExtractCardReaderId(topic)}' – card_id: {payload}");
+                int readerId = ExtractCardReaderId(topic);
+                int cardId = int.Parse(payload);
+               
+                Console.WriteLine($"Lock: '{readerId}' – card_id: {cardId}");
 
-                var accessTime = new AccessTime
+                bool allowed = await _evaluator.IsAccessAllowedAsync(cardId, readerId);
+
+                var access = new AccessTime
                 {
                     Time = DateTime.Now,
                     CardId = int.Parse(payload),
                     CardReaderId = ExtractCardReaderId(topic)
                 };
+                if (!allowed) 
+                {
+                    Console.WriteLine("Access Denied!");
+                    return;
+                }
+
+                Console.WriteLine("Access Granted!");
 
                 await _dbLock.WaitAsync();
                 try
                 {
-                    await _uow.AccessTimes.AddAsync(accessTime);
+                    await _uow.AccessTimes.AddAsync(access);
                     await _uow.CommitAsync();
                 }
                 finally
@@ -88,11 +103,11 @@ namespace AccessControlSystem.Services
                     _dbLock.Release();
                 }
 
-                Console.WriteLine($"Access logged: {accessTime.Id}");
+                Console.WriteLine($"Access logged: {access.CardId}");
 
-                OnAccessTimeLogged(accessTime); // Notify UI
+                OnAccessTimeLogged(access); // Notify UI
 
-                await PublishMessage("actuator/response", $"Processed: {payload}");
+                await PublishMessage($"actuator/{readerId}/response", $"Processed: {payload} -> Unlock");
             }
             catch (Exception ex)
             {

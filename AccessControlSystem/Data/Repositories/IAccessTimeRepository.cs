@@ -5,6 +5,7 @@ namespace AccessControlSystem.Data.Repositories
     public interface IAccessTimeRepository : IGenericRepository<AccessTime>
     {
         Task<IEnumerable<AccessTime>> GetLatestAsync(int take);
+        Task<IEnumerable<AccessTime>> GetLatestWithReaderAsync(int take);
         Task<IEnumerable<AccessTime>> GetByCardAsync(int cardId,
                                                      DateTime from,
                                                      DateTime to);

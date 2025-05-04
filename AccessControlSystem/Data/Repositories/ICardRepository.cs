@@ -6,5 +6,6 @@ namespace AccessControlSystem.Data.Repositories
     {
         Task<Card?> GetByNumberAsync(string cardNumber);
         Task<IEnumerable<Card>> GetCardsForUserAsync(int userId);
+        Task<IEnumerable<Card>> GetAllWithOwnerAsync();
     }
 }

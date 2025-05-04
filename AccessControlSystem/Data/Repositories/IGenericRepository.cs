@@ -13,6 +13,7 @@ namespace AccessControlSystem.Data.Repositories
         Task AddAsync(TEntity entity);
         void Update(TEntity entity);
         void Remove(TEntity entity);
+        TEntity GetTrackedOrAttach(TEntity entity);
     }
 
     internal class GenericRepository<TEntity> : IGenericRepository<TEntity>
@@ -35,5 +36,32 @@ namespace AccessControlSystem.Data.Repositories
 
         public void Update(TEntity entity) => _ctx.Set<TEntity>().Update(entity);
         public void Remove(TEntity entity) => _ctx.Set<TEntity>().Remove(entity);
+        public TEntity GetTrackedOrAttach(TEntity entity)
+        {
+            var entry = _ctx.Entry(entity);
+            if (entry.State != EntityState.Detached) // already tracked
+                return entity;
+
+            var key = _ctx.Model.FindEntityType(typeof(TEntity))!
+                         .FindPrimaryKey()!
+                         .Properties
+                         .Select(p => entry.Property(p.Name).CurrentValue)
+                         .ToArray();
+
+            var tracked = _ctx.Set<TEntity>().Local
+                             .FirstOrDefault(e =>
+                                 key.SequenceEqual(
+                                     _ctx.Model.FindEntityType(typeof(TEntity))!
+                                                 .FindPrimaryKey()!
+                                                 .Properties
+                                                 .Select(p => _ctx.Entry(e)
+                                                                   .Property(p.Name)
+                                                                   .CurrentValue)));
+
+            if (tracked is not null) return tracked;
+
+            _ctx.Attach(entity); // attach if nothing tracked
+            return entity;
+        }
     }
 }

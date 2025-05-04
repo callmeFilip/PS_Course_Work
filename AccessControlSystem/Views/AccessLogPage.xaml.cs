@@ -20,15 +20,24 @@ namespace AccessControlSystem.Views
             DataContext = this;
 
             // live updates
-            mqtt.AccessTimeLogged += (_, at) =>
-                Dispatcher.Invoke(() => AccessTimes.Insert(0, at));
+            mqtt.AccessTimeLogged += AccessTimeLoggedAsync;
 
             _ = LoadAsync();
         }
 
+        private async void AccessTimeLoggedAsync(object? _, AccessTime at)
+        {
+            // Ensure the navigation property is loaded so the binding engine can resolve the Location column
+            at.CardReader ??= await _uow.CardReaders.GetByIdAsync(at.CardReaderId);
+
+            // Marshal to the UI thread since we're updating an ObservableCollection bound to the grid
+            Dispatcher.Invoke(() => AccessTimes.Insert(0, at));
+        }
+
         private async Task LoadAsync()
         {
-            var latest = await _uow.AccessTimes.GetLatestAsync(100);
+            var latest = await _uow.AccessTimes.GetLatestWithReaderAsync(100);
+
             Dispatcher.Invoke(() =>
             {
                 AccessTimes.Clear();
@@ -45,5 +54,14 @@ namespace AccessControlSystem.Views
                 NavigationService?.Navigate(new UserDetailsPage(_uow, at.CardId));
             }
         }
+
+        private void ManageUsers_Click(object s, RoutedEventArgs e) =>
+            NavigationService?.Navigate(new UsersPage(_uow));
+
+        private void ManageReaders_Click(object s, RoutedEventArgs e) =>
+            NavigationService?.Navigate(new ReadersPage(_uow));
+        private void ManageCards_Click(object s, RoutedEventArgs e) =>
+            NavigationService?.Navigate(new CardsPage(_uow));
+
     }
 }
